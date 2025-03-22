@@ -12,7 +12,7 @@ ffmpeg_process = None
 
 # Thông số mặc định (thay đổi theo nhu cầu)
 DEFAULT_CDN_URL = "http://34.120.70.159/152407-802753527_small.mp4"  # URL video từ CDN
-DEFAULT_MULTICAST_ADDR = "192.168.0.255"      # Địa chỉ broadcast cho subnet 192.168.0.x
+DEFAULT_MULTICAST_ADDR = "239.255.0.1"      # Địa chỉ multicast
 DEFAULT_PORT = "1234"                          # Cổng phát
 DEFAULT_TTL = "2"                             # TTL=2 để có thể đi qua router nội bộ
 
@@ -125,8 +125,6 @@ def start_ffmpeg(cdn_url, multicast_addr, port, ttl):
         url_for_vlc = f"udp://@{multicast_addr}:{port}"
     
     print(f"Executing command: {' '.join(command)}", file=sys.stderr)
-    print(f"\n----- HƯỚNG DẪN KẾT NỐI VLC SIÊU MƯỢT -----", file=sys.stderr)
-    print(f"Để xem video không bị đứng hình trong VLC, hãy cấu hình:", file=sys.stderr)
     print(f"1. Mở VLC -> Media -> Open Network Stream -> Nhập: {url_for_vlc}", file=sys.stderr)
     print(f"2. Trong VLC -> Media -> Open Network Stream -> Show more options và Caching: 50 ms", file=sys.stderr)
     print(f"3. Hoặc: vlc {url_for_vlc} --network-caching=50 --no-video-title-show", file=sys.stderr)
