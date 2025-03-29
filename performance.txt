@@ -1,0 +1,39 @@
+=== VIDEO STREAMING PERFORMANCE REPORT ===
+Date: 2025-03-29 03:12:25
+Duration: 120 seconds
+
+=== SYSTEM PERFORMANCE ===
+Average CPU Usage: 18.90%
+Average Memory Usage: 74.23%
+Disk Usage: 7.20%
+
+=== NETWORK PERFORMANCE ===
+Average Bandwidth Usage: 353.50 KB/s
+Total Data Sent: 13.83 MB
+Total Data Received: 17.76 MB
+Estimated CDN Data: 14.08 MB
+
+=== LATENCY STATISTICS ===
+Server Latency (ms):
+  Average: 5.89
+  Minimum: 2.20
+  Maximum: 10.54
+  Standard Deviation: 2.54
+
+=== HLS SEGMENT STATISTICS ===
+Segment Download Time (ms):
+  Average: 9.14
+  Minimum: 6.59
+  Maximum: 12.28
+  Standard Deviation: 1.60
+
+=== ANALYSIS AND RECOMMENDATIONS ===
+Stream Latency: Excellent (< 10ms)
+Bandwidth Usage: Low (0.35 MB/s)
+CPU Usage: Normal (18.90%)
+Memory Usage: Normal (74.23%)
+
+FINAL ASSESSMENT:
+The streaming system is performing well. Current configuration appears optimal for the video being streamed.
+
+=== END OF REPORT ===

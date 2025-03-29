@@ -64,10 +64,6 @@ def start_ffmpeg(cdn_url, multicast_addr, port, ttl):
     print(f"Is multicast: {is_multicast}", file=sys.stderr)
     print(f"Is localhost: {is_local}", file=sys.stderr)
     
-    # Lấy địa chỉ IP của máy local
-    local_ip = "192.168.0.122"
-    print(f"Local IP address: {local_ip}", file=sys.stderr)
-
     # Đảm bảo thư mục HLS tồn tại và trống
     ensure_hls_dir()
     

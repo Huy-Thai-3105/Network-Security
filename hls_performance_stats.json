@@ -1,0 +1,402 @@
+[
+    {
+        "timestamp": "03:10:24",
+        "hls_status": {
+            "hls_running": true,
+            "multicast_running": true
+        },
+        "system_stats": {
+            "cpu_percent": 21.6,
+            "memory_percent": 75.3,
+            "disk_percent": 7.2
+        },
+        "network_stats": {
+            "latency_ms": 2.4809837341308594,
+            "segment_download_time_ms": -1,
+            "segment_size_bytes": 0,
+            "bandwidth_usage_bps": 0,
+            "bytes_sent": 0,
+            "bytes_recv": 1024
+        }
+    },
+    {
+        "timestamp": "03:10:30",
+        "hls_status": {
+            "hls_running": true,
+            "multicast_running": true
+        },
+        "system_stats": {
+            "cpu_percent": 40.2,
+            "memory_percent": 74.8,
+            "disk_percent": 7.2
+        },
+        "network_stats": {
+            "latency_ms": 2.196073532104492,
+            "segment_download_time_ms": 7.735013961791992,
+            "segment_size_bytes": 1024600,
+            "bandwidth_usage_bps": 0,
+            "bytes_sent": 20480,
+            "bytes_recv": 531456
+        }
+    },
+    {
+        "timestamp": "03:10:36",
+        "hls_status": {
+            "hls_running": false,
+            "multicast_running": false
+        },
+        "system_stats": {
+            "cpu_percent": 14.9,
+            "memory_percent": 74.8,
+            "disk_percent": 7.2
+        },
+        "network_stats": {
+            "latency_ms": 2.595186233520508,
+            "segment_download_time_ms": 10.501861572265625,
+            "segment_size_bytes": 1024600,
+            "bandwidth_usage_bps": 535756.8,
+            "bytes_sent": 1106944,
+            "bytes_recv": 2123776
+        }
+    },
+    {
+        "timestamp": "03:10:42",
+        "hls_status": {
+            "hls_running": false,
+            "multicast_running": false
+        },
+        "system_stats": {
+            "cpu_percent": 26.5,
+            "memory_percent": 73.9,
+            "disk_percent": 7.2
+        },
+        "network_stats": {
+            "latency_ms": 3.3202171325683594,
+            "segment_download_time_ms": 7.428169250488281,
+            "segment_size_bytes": 747676,
+            "bandwidth_usage_bps": 441753.6,
+            "bytes_sent": 2149376,
+            "bytes_recv": 3290112
+        }
+    },
+    {
+        "timestamp": "03:10:48",
+        "hls_status": {
+            "hls_running": false,
+            "multicast_running": false
+        },
+        "system_stats": {
+            "cpu_percent": 25.7,
+            "memory_percent": 73.9,
+            "disk_percent": 7.2
+        },
+        "network_stats": {
+            "latency_ms": 8.9263916015625,
+            "segment_download_time_ms": 12.278079986572266,
+            "segment_size_bytes": 747676,
+            "bandwidth_usage_bps": 309248.0,
+            "bytes_sent": 2920448,
+            "bytes_recv": 4065280
+        }
+    },
+    {
+        "timestamp": "03:10:54",
+        "hls_status": {
+            "hls_running": false,
+            "multicast_running": false
+        },
+        "system_stats": {
+            "cpu_percent": 20.2,
+            "memory_percent": 74.1,
+            "disk_percent": 7.2
+        },
+        "network_stats": {
+            "latency_ms": 5.007743835449219,
+            "segment_download_time_ms": 8.484840393066406,
+            "segment_size_bytes": 747676,
+            "bandwidth_usage_bps": 305561.6,
+            "bytes_sent": 3688448,
+            "bytes_recv": 4825088
+        }
+    },
+    {
+        "timestamp": "03:11:00",
+        "hls_status": {
+            "hls_running": false,
+            "multicast_running": false
+        },
+        "system_stats": {
+            "cpu_percent": 24.0,
+            "memory_percent": 75.8,
+            "disk_percent": 7.2
+        },
+        "network_stats": {
+            "latency_ms": 6.4849853515625,
+            "segment_download_time_ms": 7.071018218994141,
+            "segment_size_bytes": 747676,
+            "bandwidth_usage_bps": 316211.2,
+            "bytes_sent": 4478976,
+            "bytes_recv": 5615616
+        }
+    },
+    {
+        "timestamp": "03:11:06",
+        "hls_status": {
+            "hls_running": false,
+            "multicast_running": false
+        },
+        "system_stats": {
+            "cpu_percent": 17.8,
+            "memory_percent": 74.7,
+            "disk_percent": 7.2
+        },
+        "network_stats": {
+            "latency_ms": 4.226922988891602,
+            "segment_download_time_ms": 8.337020874023438,
+            "segment_size_bytes": 747676,
+            "bandwidth_usage_bps": 310272.0,
+            "bytes_sent": 5246976,
+            "bytes_recv": 6398976
+        }
+    },
+    {
+        "timestamp": "03:11:12",
+        "hls_status": {
+            "hls_running": false,
+            "multicast_running": false
+        },
+        "system_stats": {
+            "cpu_percent": 25.2,
+            "memory_percent": 74.5,
+            "disk_percent": 7.2
+        },
+        "network_stats": {
+            "latency_ms": 3.5991668701171875,
+            "segment_download_time_ms": 8.46409797668457,
+            "segment_size_bytes": 747676,
+            "bandwidth_usage_bps": 305152.0,
+            "bytes_sent": 6010880,
+            "bytes_recv": 7160832
+        }
+    },
+    {
+        "timestamp": "03:11:18",
+        "hls_status": {
+            "hls_running": false,
+            "multicast_running": false
+        },
+        "system_stats": {
+            "cpu_percent": 8.5,
+            "memory_percent": 73.9,
+            "disk_percent": 7.2
+        },
+        "network_stats": {
+            "latency_ms": 8.192062377929688,
+            "segment_download_time_ms": 9.81903076171875,
+            "segment_size_bytes": 747676,
+            "bandwidth_usage_bps": 304947.19999999995,
+            "bytes_sent": 6771712,
+            "bytes_recv": 7924736
+        }
+    },
+    {
+        "timestamp": "03:11:24",
+        "hls_status": {
+            "hls_running": false,
+            "multicast_running": false
+        },
+        "system_stats": {
+            "cpu_percent": 8.5,
+            "memory_percent": 73.6,
+            "disk_percent": 7.2
+        },
+        "network_stats": {
+            "latency_ms": 9.26518440246582,
+            "segment_download_time_ms": 11.153221130371094,
+            "segment_size_bytes": 747676,
+            "bandwidth_usage_bps": 305971.19999999995,
+            "bytes_sent": 7532544,
+            "bytes_recv": 8693760
+        }
+    },
+    {
+        "timestamp": "03:11:30",
+        "hls_status": {
+            "hls_running": false,
+            "multicast_running": false
+        },
+        "system_stats": {
+            "cpu_percent": 13.0,
+            "memory_percent": 73.6,
+            "disk_percent": 7.2
+        },
+        "network_stats": {
+            "latency_ms": 5.313873291015625,
+            "segment_download_time_ms": 11.986255645751953,
+            "segment_size_bytes": 747676,
+            "bandwidth_usage_bps": 306585.6,
+            "bytes_sent": 8302592,
+            "bytes_recv": 9456640
+        }
+    },
+    {
+        "timestamp": "03:11:36",
+        "hls_status": {
+            "hls_running": false,
+            "multicast_running": false
+        },
+        "system_stats": {
+            "cpu_percent": 9.8,
+            "memory_percent": 73.7,
+            "disk_percent": 7.2
+        },
+        "network_stats": {
+            "latency_ms": 4.933834075927734,
+            "segment_download_time_ms": 8.558988571166992,
+            "segment_size_bytes": 747676,
+            "bandwidth_usage_bps": 306176.0,
+            "bytes_sent": 9069568,
+            "bytes_recv": 10220544
+        }
+    },
+    {
+        "timestamp": "03:11:43",
+        "hls_status": {
+            "hls_running": false,
+            "multicast_running": false
+        },
+        "system_stats": {
+            "cpu_percent": 10.5,
+            "memory_percent": 73.8,
+            "disk_percent": 7.2
+        },
+        "network_stats": {
+            "latency_ms": 9.107112884521484,
+            "segment_download_time_ms": 10.874032974243164,
+            "segment_size_bytes": 747676,
+            "bandwidth_usage_bps": 308019.2,
+            "bytes_sent": 9839616,
+            "bytes_recv": 10990592
+        }
+    },
+    {
+        "timestamp": "03:11:49",
+        "hls_status": {
+            "hls_running": false,
+            "multicast_running": false
+        },
+        "system_stats": {
+            "cpu_percent": 21.1,
+            "memory_percent": 74.0,
+            "disk_percent": 7.2
+        },
+        "network_stats": {
+            "latency_ms": 8.378267288208008,
+            "segment_download_time_ms": 10.102987289428711,
+            "segment_size_bytes": 747676,
+            "bandwidth_usage_bps": 306176.0,
+            "bytes_sent": 10603520,
+            "bytes_recv": 11757568
+        }
+    },
+    {
+        "timestamp": "03:11:55",
+        "hls_status": {
+            "hls_running": false,
+            "multicast_running": false
+        },
+        "system_stats": {
+            "cpu_percent": 18.7,
+            "memory_percent": 74.0,
+            "disk_percent": 7.2
+        },
+        "network_stats": {
+            "latency_ms": 10.544061660766602,
+            "segment_download_time_ms": 9.100675582885742,
+            "segment_size_bytes": 747676,
+            "bandwidth_usage_bps": 304332.8,
+            "bytes_sent": 11364352,
+            "bytes_recv": 12518400
+        }
+    },
+    {
+        "timestamp": "03:12:01",
+        "hls_status": {
+            "hls_running": false,
+            "multicast_running": false
+        },
+        "system_stats": {
+            "cpu_percent": 21.2,
+            "memory_percent": 73.8,
+            "disk_percent": 7.2
+        },
+        "network_stats": {
+            "latency_ms": 7.203102111816406,
+            "segment_download_time_ms": 8.905172348022461,
+            "segment_size_bytes": 747676,
+            "bandwidth_usage_bps": 307200.0,
+            "bytes_sent": 12132352,
+            "bytes_recv": 13286400
+        }
+    },
+    {
+        "timestamp": "03:12:07",
+        "hls_status": {
+            "hls_running": false,
+            "multicast_running": false
+        },
+        "system_stats": {
+            "cpu_percent": 9.3,
+            "memory_percent": 73.9,
+            "disk_percent": 7.2
+        },
+        "network_stats": {
+            "latency_ms": 4.480838775634766,
+            "segment_download_time_ms": 6.593942642211914,
+            "segment_size_bytes": 747676,
+            "bandwidth_usage_bps": 306995.2,
+            "bytes_sent": 12894208,
+            "bytes_recv": 14059520
+        }
+    },
+    {
+        "timestamp": "03:12:13",
+        "hls_status": {
+            "hls_running": false,
+            "multicast_running": false
+        },
+        "system_stats": {
+            "cpu_percent": 13.1,
+            "memory_percent": 74.0,
+            "disk_percent": 7.2
+        },
+        "network_stats": {
+            "latency_ms": 7.737159729003906,
+            "segment_download_time_ms": 8.87298583984375,
+            "segment_size_bytes": 747676,
+            "bandwidth_usage_bps": 304742.4,
+            "bytes_sent": 13656064,
+            "bytes_recv": 14821376
+        }
+    },
+    {
+        "timestamp": "03:12:19",
+        "hls_status": {
+            "hls_running": false,
+            "multicast_running": false
+        },
+        "system_stats": {
+            "cpu_percent": 28.1,
+            "memory_percent": 74.6,
+            "disk_percent": 7.2
+        },
+        "network_stats": {
+            "latency_ms": 3.7927627563476562,
+            "segment_download_time_ms": 7.480144500732422,
+            "segment_size_bytes": 747676,
+            "bandwidth_usage_bps": 930611.2000000001,
+            "bytes_sent": 14503936,
+            "bytes_recv": 18626560
+        }
+    }
+]
