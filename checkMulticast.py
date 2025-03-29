@@ -4,15 +4,17 @@ import time
 import os
 import sys
 
-# Cấu hình địa chỉ broadcast và cổng
-BCAST_ADDR = '192.168.0.255'  # Địa chỉ broadcast
-BCAST_PORT = 1234             # Cổng phát
+# Cấu hình địa chỉ multicast và cổng
+MCAST_GRP = '239.255.0.1'  # Địa chỉ multicast
+MCAST_PORT = 1234          # Cổng phát
 
 # Tạo socket UDP
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-# Cho phép nhận broadcast packet
-sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+
+# Cấu hình cho multicast
+if sys.platform == 'darwin':  # macOS cần thêm SO_REUSEPORT
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
 
 # Đặt timeout để script không bị treo vô hạn
 sock.settimeout(10)  # 10 giây timeout
@@ -29,30 +31,34 @@ except:
 # Lấy địa chỉ IP thật của các interfaces
 print(f"Hostname: {host_name}")
 print(f"IP Address: {host_ip}")
-print(f"Broadcast address: {BCAST_ADDR}:{BCAST_PORT}")
+print(f"Multicast Group: {MCAST_GRP}:{MCAST_PORT}")
 print("----------------------\n")
 
 # Bind vào tất cả interfaces
 try:
-    sock.bind(('', BCAST_PORT))
-    print(f"Successfully bound to port {BCAST_PORT}")
+    sock.bind(('', MCAST_PORT))
+    print(f"Successfully bound to port {MCAST_PORT}")
 except socket.error as e:
-    print(f"Error binding to port {BCAST_PORT}: {e}")
+    print(f"Error binding to port {MCAST_PORT}: {e}")
     exit(1)
 
-# Thử hiển thị thêm thông tin gỡ lỗi
-print(f"\nBroadcast Configuration Details:")
+# Tham gia vào nhóm multicast
+group = socket.inet_aton(MCAST_GRP)
+mreq = struct.pack('4sL', group, socket.INADDR_ANY)
+sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+
+print(f"\nMulticast Configuration Details:")
 print(f"--------------------------------")
-print(f"Broadcast Address: {BCAST_ADDR}")
-print(f"Port: {BCAST_PORT}")
+print(f"Multicast Group: {MCAST_GRP}")
+print(f"Port: {MCAST_PORT}")
 print(f"Platform: {sys.platform}")
 print(f"--------------------------------\n")
 
-print(f"Listening for broadcast data on port {BCAST_PORT}...")
+print(f"Listening for multicast stream on {MCAST_GRP}:{MCAST_PORT}...")
 print(f"Ctrl+C to stop")
 
 # Tạo file để lưu dữ liệu nhận được
-output_file = f"broadcast_data_{int(time.time())}.ts"
+output_file = f"multicast_stream_{int(time.time())}.ts"
 total_bytes = 0
 packet_count = 0
 
@@ -92,5 +98,7 @@ except KeyboardInterrupt:
 except Exception as e:
     print(f"Error: {e}")
 finally:
+    # Rời khỏi nhóm multicast trước khi đóng socket
+    sock.setsockopt(socket.IPPROTO_IP, socket.IP_DROP_MEMBERSHIP, mreq)
     sock.close()
     print("Socket closed")

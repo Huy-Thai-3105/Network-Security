@@ -1,20 +1,30 @@
 #!/usr/bin/env python3
 import subprocess
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 import sys
 import os
 import socket
+import shutil
 
 app = Flask(__name__)
 
 # Biến toàn cục lưu FFmpeg process
 ffmpeg_process = None
+hls_process = None
 
 # Thông số mặc định (thay đổi theo nhu cầu)
 DEFAULT_CDN_URL = "http://34.120.70.159/152407-802753527_small.mp4"  # URL video từ CDN
-DEFAULT_MULTICAST_ADDR = "192.168.0.255"      # Địa chỉ broadcast cho subnet 192.168.0.x
+DEFAULT_MULTICAST_ADDR = "239.255.0.1"      # Địa chỉ multicast
 DEFAULT_PORT = "1234"                          # Cổng phát
 DEFAULT_TTL = "2"                             # TTL=2 để có thể đi qua router nội bộ
+HLS_SEGMENT_TIME = "2"                         # Độ dài mỗi segment HLS (giây)
+HLS_OUTPUT_DIR = "hls_output"                  # Thư mục chứa file HLS
+
+def ensure_hls_dir():
+    """Đảm bảo thư mục HLS tồn tại và trống"""
+    if os.path.exists(HLS_OUTPUT_DIR):
+        shutil.rmtree(HLS_OUTPUT_DIR)
+    os.makedirs(HLS_OUTPUT_DIR)
 
 def configure_firewall():
     """Cấu hình tường lửa để cho phép multicast"""
@@ -41,109 +51,102 @@ def configure_firewall():
         print("Continuing anyway...", file=sys.stderr)
 
 def start_ffmpeg(cdn_url, multicast_addr, port, ttl):
-    global ffmpeg_process
-    if ffmpeg_process is not None:
+    global ffmpeg_process, hls_process
+    if ffmpeg_process is not None or hls_process is not None:
         return False, "Streaming is already running."
 
-    # Kiểm tra xem địa chỉ có phải là broadcast/multicast không
-    is_broadcast = multicast_addr.endswith('.255')
+    # Kiểm tra xem địa chỉ có phải là multicast không
     is_multicast = multicast_addr.startswith('239.') or multicast_addr.startswith('224.')
     is_local = multicast_addr.startswith('127.')
     
     # In thông tin địa chỉ cho debug
     print(f"Stream address: {multicast_addr}", file=sys.stderr)
-    print(f"Is broadcast: {is_broadcast}", file=sys.stderr)
     print(f"Is multicast: {is_multicast}", file=sys.stderr)
     print(f"Is localhost: {is_local}", file=sys.stderr)
     
-    # Lấy địa chỉ IP của máy local
-    local_ip = "192.168.0.122"
-    print(f"Local IP address: {local_ip}", file=sys.stderr)
+    # Đảm bảo thư mục HLS tồn tại và trống
+    ensure_hls_dir()
     
-    # Cấu hình tối ưu đặc biệt để khắc phục vấn đề hình ảnh bị đứng
-    command = [
+    # Cấu hình cho multicast stream
+    multicast_command = [
         "ffmpeg",
         "-loglevel", "warning",                  # Giảm log
         "-re",                                   # Đọc với tốc độ thực 
-        "-stream_loop", "-1",                    # Loop stream nếu cần thiết để tránh dừng đột ngột
-        "-fflags", "+genpts+discardcorrupt+nobuffer+igndts", # Bỏ qua DTS, tạo PTS mới cho mượt
-        "-flags", "low_delay",                   # Flag low delay cho streaming
-        "-avoid_negative_ts", "make_zero",       # Tránh timestamp âm
-        "-analyzeduration", "500000",            # Giảm thời gian phân tích
-        "-probesize", "1000000",                 # Giảm probe size phù hợp
-        "-i", cdn_url,                           # Input URL
+        "-stream_loop", "-1",                    # Loop stream nếu cần thiết
+        "-fflags", "+genpts+discardcorrupt+nobuffer+igndts",
+        "-flags", "low_delay",
+        "-avoid_negative_ts", "make_zero",
+        "-analyzeduration", "500000",
+        "-probesize", "1000000",
+        "-i", cdn_url,
         
-        # Video codec settings - cấu hình đặc biệt cho độ mượt cao
-        "-c:v", "libx264",                       # Codec H.264
-        "-vsync", "cfr",                         # CFR cho video sync ổn định hơn
-        "-preset", "ultrafast",                  # Preset siêu nhanh cho độ trễ thấp
-        "-tune", "zerolatency",                  # Tune cho độ trễ gần như không có
-        "-profile:v", "baseline",                # Profile baseline (đơn giản nhất, ít lỗi nhất)
-        "-level", "3.0",                         # Level H.264 tương thích rộng nhưng nhẹ
-        
-        # Cấu hình bit rate và buffer tốt nhất cho streaming broadcast
-        "-b:v", "800k",                          # Bitrate vừa phải 
-        "-maxrate", "1000k",                     # Maxrate phù hợp
-        "-bufsize", "1000k",                     # Buffer nhỏ để tránh delay
-        "-r", "24",                              # Frame rate ổn định 24fps (tiêu chuẩn phim)
-        
-        # Tùy chọn x264 siêu tối ưu cho streaming
-        "-x264opts", "no-cabac:no-scenecut:partitions=none:ref=1:me=dia:subme=0:trellis=0:weightp=0:no-weightb:bframes=0:8x8dct=0", # Options x264 cực nhẹ
-        
-        # Cấu hình keyframe chặt chẽ để tránh hiện tượng hình ảnh bị đứng
-        "-force_key_frames", "expr:gte(t,n_forced*0.5)", # Force keyframe mỗi 0.5 giây rất quan trọng
-        "-g", "12",                              # GOP size ngắn (12 frames cho 24fps = 0.5 giây)
-        "-keyint_min", "12",                     # Khoảng cách tối thiểu giữa các keyframe
-        "-sc_threshold", "0",                    # Tắt scene change detection
-        
-        # Video filtering
-        "-vf", "fps=fps=24",                     # Ổn định framerate
+        # Video settings
+        "-c:v", "libx264",
+        "-vsync", "cfr",
+        "-preset", "ultrafast",
+        "-tune", "zerolatency",
+        "-profile:v", "baseline",
+        "-level", "3.0",
+        "-b:v", "800k",
+        "-maxrate", "1000k",
+        "-bufsize", "1000k",
+        "-r", "24",
+        "-x264opts", "no-cabac:no-scenecut:partitions=none:ref=1:me=dia:subme=0:trellis=0:weightp=0:no-weightb:bframes=0:8x8dct=0",
+        "-force_key_frames", "expr:gte(t,n_forced*0.5)",
+        "-g", "12",
+        "-keyint_min", "12",
+        "-sc_threshold", "0",
+        "-vf", "fps=fps=24",
         
         # Audio settings
-        "-c:a", "aac",                           # Audio codec AAC
-        "-b:a", "96k",                           # Bitrate audio vừa đủ
-        "-ar", "44100",                          # Sample rate tiêu chuẩn
-        "-ac", "2",                              # 2 kênh stereo
+        "-c:a", "aac",
+        "-b:a", "96k",
+        "-ar", "44100",
+        "-ac", "2",
         
-        # Cấu hình muxing
+        # Output settings
         "-max_muxing_queue_size", "9999",
-        "-muxdelay", "0",                        # Không delay khi muxing
-        "-muxpreload", "0",                      # Preload 0s
-        
-        # Output format
+        "-muxdelay", "0",
+        "-muxpreload", "0",
         "-f", "mpegts",
     ]
-    
-    # Thêm đối số đầu ra và thông báo cho người dùng cách kết nối
-    if is_broadcast:
-        # Broadcast với UDP
-        command.append(f"udp://{multicast_addr}:{port}?broadcast=1&pkt_size=1316&buffer_size=65536&ttl={ttl}")
-        url_for_vlc = f"udp://@{multicast_addr}:{port}"
+
+    # Thêm đầu ra cho multicast
+    if is_multicast:
+        multicast_output = f"udp://{multicast_addr}:{port}?pkt_size=1316&buffer_size=65536&ttl={ttl}"
     else:
-        # Unicast với UDP
-        command.append(f"udp://{multicast_addr}:{port}?pkt_size=1316&buffer_size=65536")
-        url_for_vlc = f"udp://@{multicast_addr}:{port}"
+        multicast_output = f"udp://{multicast_addr}:{port}?pkt_size=1316&buffer_size=65536"
     
-    print(f"Executing command: {' '.join(command)}", file=sys.stderr)
-    print(f"\n----- HƯỚNG DẪN KẾT NỐI VLC SIÊU MƯỢT -----", file=sys.stderr)
-    print(f"Để xem video không bị đứng hình trong VLC, hãy cấu hình:", file=sys.stderr)
-    print(f"1. Mở VLC -> Media -> Open Network Stream -> Nhập: {url_for_vlc}", file=sys.stderr)
-    print(f"2. Trong VLC -> Media -> Open Network Stream -> Show more options và Caching: 50 ms", file=sys.stderr)
-    print(f"3. Hoặc: vlc {url_for_vlc} --network-caching=50 --no-video-title-show", file=sys.stderr)
-    print(f"4. Nếu vẫn bị đứng hình, mở VLC -> Tools -> Preferences -> Input & Codecs:", file=sys.stderr)
-    print(f"   - Network caching: 50ms", file=sys.stderr) 
-    print(f"   - Hardware decoding: Disable", file=sys.stderr)
-    print(f"   - Skip frames: Enabled", file=sys.stderr)
-    print(f"5. Phải restart VLC sau khi thay đổi cài đặt", file=sys.stderr)
-    print(f"--------------------------------\n", file=sys.stderr)
-    
-    # Cập nhật giá trị mặc định cho CDN URL
-    global DEFAULT_CDN_URL
-    DEFAULT_CDN_URL = cdn_url
+    multicast_command.append(multicast_output)
+
+    # Cấu hình cho HLS stream
+    hls_command = [
+        "ffmpeg",
+        "-loglevel", "warning",
+        "-re",
+        "-i", cdn_url,
+        "-c:v", "libx264",
+        "-c:a", "aac",
+        "-b:v", "800k",
+        "-b:a", "96k",
+        "-ar", "44100",
+        "-ac", "2",
+        "-f", "hls",
+        "-hls_time", HLS_SEGMENT_TIME,
+        "-hls_list_size", "5",
+        "-hls_flags", "delete_segments",
+        "-hls_segment_filename", f"{HLS_OUTPUT_DIR}/segment_%d.ts",
+        f"{HLS_OUTPUT_DIR}/playlist.m3u8"
+    ]
     
     try:
-        # Khởi chạy FFmpeg
-        ffmpeg_process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # Khởi chạy FFmpeg cho multicast
+        print(f"Starting multicast stream...", file=sys.stderr)
+        ffmpeg_process = subprocess.Popen(multicast_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        
+        # Khởi chạy FFmpeg cho HLS
+        print(f"Starting HLS stream...", file=sys.stderr)
+        hls_process = subprocess.Popen(hls_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
         # Đợi một chút để xem có lỗi ngay không
         try:
@@ -151,148 +154,222 @@ def start_ffmpeg(cdn_url, multicast_addr, port, ttl):
             if return_code != 0:
                 error = ffmpeg_process.stderr.read().decode('utf-8')
                 ffmpeg_process = None
-                return False, f"FFmpeg failed: {error}"
+                return False, f"Multicast FFmpeg failed: {error}"
         except subprocess.TimeoutExpired:
-            # Timeout nghĩa là ffmpeg đang chạy, đây là điều tốt
+            pass
+
+        try:
+            return_code = hls_process.wait(timeout=2)
+            if return_code != 0:
+                error = hls_process.stderr.read().decode('utf-8')
+                hls_process = None
+                return False, f"HLS FFmpeg failed: {error}"
+        except subprocess.TimeoutExpired:
             pass
             
-        return True, "Streaming started successfully."
+        print(f"\n----- HƯỚNG DẪN KẾT NỐI -----", file=sys.stderr)
+        print(f"1. Xem qua Multicast:", file=sys.stderr)
+        print(f"   - VLC -> Media -> Open Network Stream -> Nhập: udp://@{multicast_addr}:{port}", file=sys.stderr)
+        print(f"   - Hoặc: vlc udp://@{multicast_addr}:{port} --network-caching=50", file=sys.stderr)
+        print(f"2. Xem qua HLS:", file=sys.stderr)
+        print(f"   - VLC -> Media -> Open Network Stream -> Nhập: http://localhost:3000/hls/playlist.m3u8", file=sys.stderr)
+        print(f"   - Hoặc trình duyệt web: http://localhost:3000/hls/player.html", file=sys.stderr)
+        print(f"--------------------------------\n", file=sys.stderr)
+        
+        return True, "Streaming started successfully (both Multicast and HLS)."
     except Exception as e:
         if ffmpeg_process:
-            try:
-                ffmpeg_process.terminate()
-            except:
-                pass
+            ffmpeg_process.terminate()
             ffmpeg_process = None
-        return False, f"Error starting FFmpeg: {e}"
+        if hls_process:
+            hls_process.terminate()
+            hls_process = None
+        return False, f"Error starting stream: {e}"
 
 def stop_ffmpeg():
-    global ffmpeg_process
-    if ffmpeg_process is None:
-        return False, "No streaming process is running."
+    global ffmpeg_process, hls_process
+    success = True
+    message = []
+    
+    # Dừng multicast process
+    if ffmpeg_process:
+        try:
+            ffmpeg_process.terminate()
+            try:
+                ffmpeg_process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                ffmpeg_process.kill()
+            message.append("Multicast stream stopped")
+        except Exception as e:
+            success = False
+            message.append(f"Error stopping multicast: {e}")
+        finally:
+            ffmpeg_process = None
+    
+    # Dừng HLS process
+    if hls_process:
+        try:
+            hls_process.terminate()
+            try:
+                hls_process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                hls_process.kill()
+            message.append("HLS stream stopped")
+        except Exception as e:
+            success = False
+            message.append(f"Error stopping HLS: {e}")
+        finally:
+            hls_process = None
+    
+    # Dọn dẹp thư mục HLS
     try:
-        # Lưu PID trước để có thể kiểm tra sau
-        ffmpeg_pid = ffmpeg_process.pid
-        print(f"Attempting to terminate FFmpeg process (PID: {ffmpeg_pid})", file=sys.stderr)
-        
-        # Thử terminate (SIGTERM) trước
-        ffmpeg_process.terminate()
-        
-        # Đợi tối đa 3 giây
-        try:
-            ffmpeg_process.wait(timeout=3)
-            print(f"FFmpeg process terminated gracefully", file=sys.stderr)
-        except subprocess.TimeoutExpired:
-            print(f"FFmpeg process did not terminate gracefully, sending SIGKILL", file=sys.stderr)
-            # Nếu quá thời gian, dùng kill (SIGKILL)
-            ffmpeg_process.kill()
-            ffmpeg_process.wait(timeout=2)
-            print(f"FFmpeg process killed with SIGKILL", file=sys.stderr)
-        
-        # Kiểm tra thêm bằng ps để đảm bảo
-        try:
-            # Sử dụng ps để kiểm tra xem tiến trình còn tồn tại không
-            ps_check = subprocess.run(["ps", "-p", str(ffmpeg_pid)], 
-                                     stdout=subprocess.PIPE, 
-                                     stderr=subprocess.PIPE)
-            
-            # Nếu tiến trình vẫn còn (ps trả về 0)
-            if ps_check.returncode == 0:
-                print(f"FFmpeg process still exists after SIGKILL, using system kill", file=sys.stderr)
-                # Dùng kill của hệ thống
-                os.system(f"kill -9 {ffmpeg_pid}")
-        except Exception as e:
-            print(f"Error checking process status: {e}", file=sys.stderr)
-        
-        # Kiểm tra lại PID của FFmpeg
-        try:
-            check_cmd = f"ps aux | grep {ffmpeg_pid} | grep -v grep"
-            check_result = os.popen(check_cmd).read()
-            if check_result.strip():
-                print(f"WARNING: Process {ffmpeg_pid} may still be running after kill attempts", file=sys.stderr)
-                print(f"Running processes: {check_result}", file=sys.stderr)
-            else:
-                print(f"Confirmed: Process {ffmpeg_pid} is stopped", file=sys.stderr)
-        except Exception as e:
-            print(f"Error during final check: {e}", file=sys.stderr)
-        
-        # Đặt process về None
-        ffmpeg_process = None
-        return True, "Streaming stopped successfully."
+        if os.path.exists(HLS_OUTPUT_DIR):
+            shutil.rmtree(HLS_OUTPUT_DIR)
     except Exception as e:
-        # Trong trường hợp có lỗi, thử kill -9 trực tiếp
-        try:
-            if ffmpeg_process and ffmpeg_process.pid:
-                os.system(f"kill -9 {ffmpeg_process.pid}")
-                print(f"Emergency kill -9 sent to PID {ffmpeg_process.pid}", file=sys.stderr)
-                ffmpeg_process = None
-                return True, "Streaming forcibly terminated after error."
-        except:
-            pass
-        
-        return False, f"Error stopping FFmpeg: {e}"
+        print(f"Error cleaning HLS directory: {e}", file=sys.stderr)
+    
+    return success, ". ".join(message)
 
 @app.route("/")
 def index():
     return """
     <html>
-    <head><title>Video Streaming Server</title></head>
+    <head>
+        <title>Video Streaming Server</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            h1 { color: #333; }
+            .endpoint { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 5px; }
+            .player { margin-top: 20px; }
+        </style>
+    </head>
     <body>
         <h1>Video Streaming Server</h1>
-        <p>Use the following endpoints:</p>
-        <ul>
-            <li><a href="/start">Start streaming</a> (can add parameters: cdn_url, multicast_addr, port, ttl)</li>
-            <li><a href="/stop">Stop streaming</a></li>
-            <li><a href="/status">Check status</a></li>
-        </ul>
+        <p>Available endpoints:</p>
+        <div class="endpoint">
+            <h3>Start Streaming</h3>
+            <p>GET /start</p>
+            <p>Parameters:</p>
+            <ul>
+                <li>cdn_url (optional): Source video URL</li>
+                <li>multicast_addr (optional): Multicast address</li>
+                <li>port (optional): Port number</li>
+                <li>ttl (optional): Time to live</li>
+            </ul>
+        </div>
+        <div class="endpoint">
+            <h3>Stop Streaming</h3>
+            <p>GET /stop</p>
+        </div>
+        <div class="endpoint">
+            <h3>Check Status</h3>
+            <p>GET /status</p>
+        </div>
+        <div class="endpoint">
+            <h3>HLS Stream</h3>
+            <p>Access the HLS stream at: /hls/playlist.m3u8</p>
+            <p>Web player available at: /hls/player.html</p>
+        </div>
+        <div class="player">
+            <h2>Live Stream Player</h2>
+            <video id="video" controls style="max-width: 100%;">
+                <source src="/hls/playlist.m3u8" type="application/x-mpegURL">
+                Your browser does not support HTML5 video.
+            </video>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+        <script>
+            if (Hls.isSupported()) {
+                var video = document.getElementById('video');
+                var hls = new Hls();
+                hls.loadSource('/hls/playlist.m3u8');
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    video.play();
+                });
+            }
+        </script>
     </body>
     </html>
     """
 
-@app.route("/start", methods=["GET"])
+@app.route("/start")
 def start_stream():
-    # Cho phép truyền tham số qua query string (nếu không có sẽ dùng giá trị mặc định)
     cdn_url = request.args.get("cdn_url", DEFAULT_CDN_URL)
     multicast_addr = request.args.get("multicast_addr", DEFAULT_MULTICAST_ADDR)
     port = request.args.get("port", DEFAULT_PORT)
     ttl = request.args.get("ttl", DEFAULT_TTL)
     
-    # Xác định loại streaming
-    stream_type = "unicast" if multicast_addr.startswith('127.') else "multicast"
-    print(f"Starting {stream_type} stream from {cdn_url} to {multicast_addr}:{port} with TTL {ttl}", file=sys.stderr)
-    
-    # Thử cấu hình tường lửa nếu sử dụng multicast
-    if stream_type == "multicast":
-        configure_firewall()
-    
     success, message = start_ffmpeg(cdn_url, multicast_addr, port, ttl)
-    return jsonify({"success": success, "message": message, "stream_type": stream_type})
+    return jsonify({"success": success, "message": message})
 
-@app.route("/stop", methods=["GET"])
+@app.route("/stop")
 def stop_stream():
     success, message = stop_ffmpeg()
     return jsonify({"success": success, "message": message})
 
-@app.route("/status", methods=["GET"])
+@app.route("/status")
 def status():
-    if ffmpeg_process is None:
-        return jsonify({"status": "stopped"})
-    
-    # Kiểm tra xem ffmpeg còn chạy không
-    try:
-        returncode = ffmpeg_process.poll()
-        if returncode is not None:
-            # Process đã kết thúc
-            error = ffmpeg_process.stderr.read().decode('utf-8')
-            return jsonify({
-                "status": "stopped", 
-                "exit_code": returncode,
-                "error": error
-            })
-        else:
-            return jsonify({"status": "running"})
-    except:
-        return jsonify({"status": "unknown"})
+    return jsonify({
+        "multicast_running": ffmpeg_process is not None,
+        "hls_running": hls_process is not None
+    })
+
+@app.route('/hls/<path:filename>')
+def serve_hls(filename):
+    return send_from_directory(HLS_OUTPUT_DIR, filename)
+
+@app.route('/hls/player.html')
+def hls_player():
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>HLS Player</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; background: #f0f0f0; }
+            .container { max-width: 800px; margin: 0 auto; }
+            video { width: 100%; background: #000; }
+            .controls { margin-top: 20px; }
+            button { padding: 10px 20px; margin: 5px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Live Stream</h1>
+            <video id="video" controls></video>
+            <div class="controls">
+                <button onclick="reloadPlayer()">Reload Player</button>
+            </div>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+        <script>
+            function initPlayer() {
+                if (Hls.isSupported()) {
+                    var video = document.getElementById('video');
+                    var hls = new Hls({
+                        debug: false,
+                        enableWorker: true,
+                        lowLatencyMode: true,
+                        backBufferLength: 90
+                    });
+                    hls.loadSource('/hls/playlist.m3u8');
+                    hls.attachMedia(video);
+                    hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                        video.play();
+                    });
+                }
+            }
+            
+            function reloadPlayer() {
+                location.reload();
+            }
+            
+            initPlayer();
+        </script>
+    </body>
+    </html>
+    """
 
 if __name__ == "__main__":
     # Kiểm tra xem ffmpeg có được cài đặt không
@@ -304,9 +381,8 @@ if __name__ == "__main__":
     print("==========================", file=sys.stderr)
     print(f"Default CDN URL: {DEFAULT_CDN_URL}", file=sys.stderr)
     print(f"Default address: {DEFAULT_MULTICAST_ADDR}:{DEFAULT_PORT}", file=sys.stderr)
-    addr_type = "unicast (localhost)" if DEFAULT_MULTICAST_ADDR.startswith('127.') else "multicast"
-    print(f"Address type: {addr_type}", file=sys.stderr)
-    print(f"Default TTL: {DEFAULT_TTL}", file=sys.stderr)
+    print(f"HLS output directory: {HLS_OUTPUT_DIR}", file=sys.stderr)
+    print(f"HLS segment time: {HLS_SEGMENT_TIME} seconds", file=sys.stderr)
     print("==========================\n", file=sys.stderr)
     
     # Chạy server Flask trên cổng 3000

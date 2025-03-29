@@ -1,0 +1,3 @@
+# HLS output files
+hls_output/
+*.ts
